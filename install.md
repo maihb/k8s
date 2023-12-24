@@ -45,6 +45,16 @@ EOF
 yum install -y kubelet-1.23.15 kubeadm-1.23.15 kubectl-1.23.15 --disableexcludes=kubernetes
 #yum remove  kubelet kubeadm kubectl
 systemctl enable kubelet && systemctl start kubelet
+
+#关闭防火墙
+firewall-cmd --state
+systemctl stop firewalld.service
+systemctl disable firewalld.service
+
+#安装缓存工具
+yum -y install systemd-resolved
+systemctl start systemd-resolved && systemctl status systemd-resolved
+systemctl enable systemd-resolved
 ```
 
 ## 1.1 禁用swap分区
@@ -102,7 +112,7 @@ root@v-db:~# iptables -F
 root@v-db:~# service docker restart   
 
 ## It seems like the kubelet isn't running or healthy.
-journalctl -xeu kubelet   
+journalctl -xefu kubelet   
  查询系统日志可知：“Failed to run kubelet” err="failed to run Kubelet: misconfiguration: kubelet driver: “cgroupfs” is different from docker cgroup driver: “systemd”    
 解决办法：  docker配置添加 “exec-opts”: [“native.cgroupdriver=systemd”]   
 vim /etc/docker/daemon.json  # 添加：  
@@ -116,8 +126,21 @@ service docker restart
 service kubelet restart   
 
 最后检测：
-ubuntu@v-db:~$ kubectl get nodes
-NAME    STATUS     ROLES                  AGE   VERSION
-v-db    NotReady   control-plane,master   41m   v1.23.15
-v2      NotReady   <none>                 32s   v1.23.15
-vnic1   NotReady   <none>                 32s   v1.23.15
+ubuntu@v-db:~$ kubectl get node
+NAME    STATUS   ROLES                  AGE    VERSION
+c2      Ready    <none>                 8m9s   v1.23.15
+v-db    Ready    control-plane,master   140m   v1.23.15
+vnic1   Ready    <none>                 99m    v1.23.15
+
+## 安装网络插件
+ git地址：https://github.com/coreos/flannel#flannel   
+kubectl apply -f https://raw.githubusercontent.com/flannel-io/flannel/master/Documentation/kube-flannel.yml
+
+
+## 删除 Worker 节点
+如果希望删除 Worker 节点，可以在 Master 节点上执行如下命令  
+```sh
+kubectl get nodes  
+kubectl drain v2 --delete-local-data --force --ignore-daemonsets   #node NAME = v2
+kubectl delete node v2 
+```
