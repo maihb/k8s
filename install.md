@@ -13,7 +13,7 @@ minikube start #failed
 sudo rpm -e minikube
 ```
 
-## 0.1 多实例版本  kubeadm
+## 0.1 多实例版本  kubeadm ubuntu
 
 ```sh
 apt-get update && apt-get install -y apt-transport-https curl
@@ -28,6 +28,23 @@ EOF
 apt update
 apt-get install -y kubelet=1.23.15-00 kubeadm=1.23.15-00 kubectl=1.23.15-00
 apt-mark hold kubelet kubeadm kubectl
+```
+
+## 0.2 多实例版本  kubeadm centos7
+```sh
+cat <<EOF > /etc/yum.repos.d/kubernetes.repo
+[kubernetes]
+name=Kubernetes
+baseurl=https://mirrors.aliyun.com/kubernetes/yum/repos/kubernetes-el7-x86_64/
+enabled=1
+gpgcheck=1
+repo_gpgcheck=1
+gpgkey=https://mirrors.aliyun.com/kubernetes/yum/doc/yum-key.gpg https://mirrors.aliyun.com/kubernetes/yum/doc/rpm-package-key.gpg
+EOF
+
+yum install -y kubelet-1.23.15 kubeadm-1.23.15 kubectl-1.23.15 --disableexcludes=kubernetes
+#yum remove  kubelet kubeadm kubectl
+systemctl enable kubelet && systemctl start kubelet
 ```
 
 ## 1.1 禁用swap分区
@@ -53,6 +70,9 @@ sysctl --system
 
 ## 2.1 安装 Master 节点
 ```sh
+
+kubeadm init --apiserver-advertise-address=10.10.0.3  --service-cidr=20.20.0.0/16 --pod-network-cidr=10.244.0.0/16 --kubernetes-version v1.21.1
+
 kubeadm init \
  --kubernetes-version v1.23.15 \
  --pod-network-cidr=10.244.0.0/16 \
@@ -63,4 +83,41 @@ Then you can join any number of worker nodes by running the following on each as
 
 kubeadm join 10.1.1.152:6443 --token 3fohln.wdqxcw08es87gbk7 \
         --discovery-token-ca-cert-hash sha256:af66ecd3ec8a018596f9caff46ee731348bf87bd900b8240a4ecb3b0c856907f 
+
+#token 具有时效性，如果 token 过期，可以在 Master 节点上重新生成
+kubeadm token create --print-join-command
+
+#重置： kubeadm reset
+
+#非root用户使用kubectl --切换回非 root 用户
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
 ```
+
+## 如果遇到 join 失败：
+先测试 telnet 10.1.1.152 6443 失败，可能是防火墙有问题，清掉规则重新来   
+root@v-db:~# iptables -F   
+root@v-db:~# service docker restart   
+
+## It seems like the kubelet isn't running or healthy.
+journalctl -xeu kubelet   
+ 查询系统日志可知：“Failed to run kubelet” err="failed to run Kubelet: misconfiguration: kubelet driver: “cgroupfs” is different from docker cgroup driver: “systemd”    
+解决办法：  docker配置添加 “exec-opts”: [“native.cgroupdriver=systemd”]   
+vim /etc/docker/daemon.json  # 添加：  
+```json
+{
+  "exec-opts": ["native.cgroupdriver=systemd"]
+}
+```
+重启 docker  和  kubelet   
+service docker restart   
+service kubelet restart   
+
+最后检测：
+ubuntu@v-db:~$ kubectl get nodes
+NAME    STATUS     ROLES                  AGE   VERSION
+v-db    NotReady   control-plane,master   41m   v1.23.15
+v2      NotReady   <none>                 32s   v1.23.15
+vnic1   NotReady   <none>                 32s   v1.23.15
