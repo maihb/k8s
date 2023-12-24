@@ -13,4 +13,9 @@ minikube start #failed
 sudo rpm -e minikube
 ```
 
-# 多实例 k8s
+# 多实例版本  kubeadm
+
+```sh
+apt-get update && apt-get install -y apt-transport-https curl
+apt-get install -y kubelet kubeadm kubectl --allow-unauthenticated
+```
