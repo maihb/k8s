@@ -144,3 +144,10 @@ kubectl get nodes
 kubectl drain v2 --delete-local-data --force --ignore-daemonsets   #node NAME = v2
 kubectl delete node v2 
 ```
+## 自动补全
+```sh
+kubectl completion bash | sudo tee /etc/bash_completion.d/kubectl > /dev/null
+sudo chmod a+r /etc/bash_completion.d/kubectl
+echo 'alias k=kubectl' >>/etc/profile
+echo 'complete -o default -F __start_kubectl k' >>/etc/profile
+```
