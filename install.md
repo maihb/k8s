@@ -83,12 +83,17 @@ sysctl --system
 
 kubeadm init --apiserver-advertise-address=10.10.0.3  --service-cidr=20.20.0.0/16 --pod-network-cidr=10.244.0.0/16 --kubernetes-version v1.21.1
 
+# 云服务器多实例需要在路由表添加下面几个 IP 路由设置，确保互通。
+# apiserver-advertise-address 值为 本机 IP ,最后打印
+# 下面 2 个 cidr，如果是多实例 ip， 需要手动确认路由表是否可通。否则无法访问 services
 kubeadm init \
  --kubernetes-version v1.23.15 \
- --pod-network-cidr=10.244.0.0/16 \
+ --pod-network-cidr=10.10.0.0/16 \
+ --service-cidr=20.20.0.0/16 \
  --apiserver-advertise-address=10.1.1.152 \
  --ignore-preflight-errors=NumCPU    
-# apiserver-advertise-address 值为 本机 IP ,最后打印
+
+# 输出：
 Then you can join any number of worker nodes by running the following on each as root:
 
 kubeadm join 10.1.1.152:6443 --token 3fohln.wdqxcw08es87gbk7 \
@@ -133,8 +138,8 @@ v-db    Ready    control-plane,master   140m   v1.23.15
 vnic1   Ready    <none>                 99m    v1.23.15
 
 ## 安装网络插件
- git地址：https://github.com/coreos/flannel#flannel   
-kubectl apply -f https://raw.githubusercontent.com/flannel-io/flannel/master/Documentation/kube-flannel.yml
+copy from git地址：https://github.com/coreos/flannel#flannel  
+kubectl apply -f https://raw.githubusercontent.com/maihb/k8s/master/kube-flannel.yml
 
 
 ## 删除 Worker 节点
