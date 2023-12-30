@@ -102,7 +102,9 @@ kubeadm join 10.1.1.152:6443 --token 3fohln.wdqxcw08es87gbk7 \
 #token 具有时效性，如果 token 过期，可以在 Master 节点上重新生成
 kubeadm token create --print-join-command
 
-#重置： kubeadm reset
+#重置： kubeadm reset ,记得删除网桥 
+kubeadm reset  && ip link delete cni0; ip link delete flannel.1
+rm -rf /var/lib/cni/;rm -rf /var/lib/kubelet/*;rm -rf /etc/cni/
 
 #非root用户使用kubectl --切换回非 root 用户
 mkdir -p $HOME/.kube
@@ -138,8 +140,14 @@ v-db    Ready    control-plane,master   140m   v1.23.15
 vnic1   Ready    <none>                 99m    v1.23.15
 
 ## 安装网络插件
-copy from git地址：https://github.com/coreos/flannel#flannel  
-kubectl apply -f https://raw.githubusercontent.com/maihb/k8s/master/kube-flannel.yml
+copy from git地址：https://github.com/coreos/flannel#flannel   
+kubectl apply -f https://raw.githubusercontent.com/maihb/k8s/master/kube-flannel.yml   
+```sh
+# 如果修改过 cidr，需要执行下面命令删掉之前的网桥
+sudo ip link delete cni0 && sudo ip link delete flannel.1 
+reboot ## 重启，重置 iptables
+
+``` 
 
 
 ## 删除 Worker 节点
@@ -155,4 +163,17 @@ kubectl completion bash | sudo tee /etc/bash_completion.d/kubectl > /dev/null
 sudo chmod a+r /etc/bash_completion.d/kubectl
 echo 'alias k=kubectl' >>/etc/profile
 echo 'complete -o default -F __start_kubectl k' >>/etc/profile
+```
+
+## 开个服务测试一下 --网络有问题，暂停测试
+
+```sh
+kubectl create deployment nginx --image=nginx
+kubectl expose deployment nginx --port=80 --type=NodePort
+kubectl get pod,svc
+
+#删除
+kubectl delete deployment nginx --image=nginx
+kubectl delete deployment nginx --port=80 --type=NodePort
+kubectl get pod,svc
 ```
