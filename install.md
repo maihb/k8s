@@ -165,15 +165,39 @@ echo 'alias k=kubectl' >>/etc/profile
 echo 'complete -o default -F __start_kubectl k' >>/etc/profile
 ```
 
-## 开个服务测试一下 --网络有问题，暂停测试
+## 开个服务测试一下 ok
 
 ```sh
 kubectl create deployment nginx --image=nginx
 kubectl expose deployment nginx --port=80 --type=NodePort
 kubectl get pod,svc
-
+# ubuntu@v-db:~$ k get svc -o wide
+# NAME         TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)        AGE   SELECTOR
+# kubernetes   ClusterIP   20.20.0.1      <none>        443/TCP        18h   <none>
+# nginx        NodePort    20.20.68.192   <none>        80:30648/TCP   18h   app=nginx
 #删除
 kubectl delete deployment nginx --image=nginx
 kubectl delete deployment nginx --port=80 --type=NodePort
 kubectl get pod,svc
 ```
+curl 10.1.1.176:30648  --node ip   
+![Alt 测试效果](res/image.png)
+
+
+## 安装 仪表板（Dashboard）
+```sh
+# 面板服务
+kubectl apply -f https://raw.githubusercontent.com/maihb/k8s/master/dashboard/recommended.yaml   
+# 创建服务用户
+kubectl apply -f https://raw.githubusercontent.com/maihb/k8s/master/dashboard/adminUser.yaml   
+# 绑定集群角色和服务用户
+kubectl apply -f https://raw.githubusercontent.com/maihb/k8s/master/dashboard/clusterRoleBinding.yaml   
+
+# 获取服务用户 “admin-user” 的 token
+kubectl -n kubernetes-dashboard describe secret $(kubectl -n kubernetes-dashboard get serviceaccount admin-user  -o=jsonpath='{.secrets[0].name}')
+
+#登录：
+https://nodeIP:30559/#/login
+```
+面板界面：   
+![Alt text](res/mianban.png)
