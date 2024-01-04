@@ -16,7 +16,7 @@ sudo rpm -e minikube
 ## 0.1 多实例版本  kubeadm ubuntu
 
 ```sh
-apt-get update && apt-get install -y apt-transport-https curl
+apt-get update && apt-get install -y apt-transport-https curl net-tools
 
 # 设置 kubeadm 软件源：
 curl https://mirrors.aliyun.com/kubernetes/apt/doc/apt-key.gpg | sudo apt-key add -
@@ -25,7 +25,6 @@ deb https://mirrors.aliyun.com/kubernetes/apt/ kubernetes-xenial main
 EOF
 
 # 安装 kubelet、kubeadm 和 kubectl，并锁定其版本：
-apt update
 apt-get install -y kubelet=1.23.15-00 kubeadm=1.23.15-00 kubectl=1.23.15-00
 apt-mark hold kubelet kubeadm kubectl
 ```
@@ -80,23 +79,19 @@ sysctl --system
 
 ## 2.1 安装 Master 节点
 ```sh
-
-kubeadm init --apiserver-advertise-address=10.10.0.3  --service-cidr=20.20.0.0/16 --pod-network-cidr=10.244.0.0/16 --kubernetes-version v1.21.1
-
-# 云服务器多实例需要在路由表添加下面几个 IP 路由设置，确保互通。
 # apiserver-advertise-address 值为 本机 IP ,最后打印
 # 下面 2 个 cidr，如果是多实例 ip， 需要手动确认路由表是否可通。否则无法访问 services
 kubeadm init \
  --kubernetes-version v1.23.15 \
  --pod-network-cidr=10.10.0.0/16 \
  --service-cidr=20.20.0.0/16 \
- --apiserver-advertise-address=10.1.1.152 \
+ --apiserver-advertise-address=10.1.1.145 \
  --ignore-preflight-errors=NumCPU    
 
 # 输出：
 Then you can join any number of worker nodes by running the following on each as root:
 
-kubeadm join 10.1.1.152:6443 --token 3fohln.wdqxcw08es87gbk7 \
+kubeadm join 10.1.1.145:6443 --token 3fohln.wdqxcw08es87gbk7 \
         --discovery-token-ca-cert-hash sha256:af66ecd3ec8a018596f9caff46ee731348bf87bd900b8240a4ecb3b0c856907f 
 
 #token 具有时效性，如果 token 过期，可以在 Master 节点上重新生成
@@ -114,7 +109,7 @@ sudo chown $(id -u):$(id -g) $HOME/.kube/config
 ```
 
 ## 如果遇到 join 失败：
-先测试 telnet 10.1.1.152 6443 失败，可能是防火墙有问题，清掉规则重新来   
+先测试 telnet 10.1.1.145 6443 失败，可能是防火墙有问题，清掉规则重新来   
 root@v-db:~# iptables -F   
 root@v-db:~# service docker restart   
 
